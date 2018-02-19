@@ -23,7 +23,7 @@ Based on CNN news, we realized that the US-Mexico broader apprehensions hit 17 y
 Q1: Tucson has highest appehensions in 2010, and Rio Grande Valley the highest in 2017. Has there been a change in maximum?
 ```{r}
 B2010 <- read.csv("BP Apprehensions 2010.csv")
-B2017 <- read.csv("/PB Apprehensions 2017.csv")
+B2017 <- read.csv("PB Apprehensions 2017.csv")
 
 #add setor sums and smonth sums in 2010
 rownames(B2010) <- B2010[,1]
