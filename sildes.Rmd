@@ -1,0 +1,321 @@
+---
+title: "MA415/615 Project One: U.S. Total Illegal Alien Apprehensions Analysis"
+author: "ShihChing Huang, XiCheng, Ziran Min"
+date: "Febuary 18, 2018"
+output: ioslides_presentation
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Background
+Based on CNN news, we realized that the US-Mexico broader apprehensions hit 17 years lowest in the first few months of the Trump administration. This phenomenon has been interpreted as "President Donald Trump's rhetoric and aggressive push to enforce immigration laws". Therefore, we want to analyze the data from the past to see whether this phenomenon had already existed before or it's really related to the new law as people saying.
+
+## Datasets 
+
+- BP Apprehensions 2010.csv
+- BP Apprehensions 2017.csv
+- BP monthly summaries.csv
+
+## Compare Apprehensions by Sectors
+Q1: Tucson has highest appehensions in 2010, and Rio Grande Valley the highest in 2017. Has there been a change in maximum?
+```{r}
+B2010 <- read.csv("BP Apprehensions 2010.csv")
+B2017 <- read.csv("PB Apprehensions 2017.csv")
+
+#add setor sums and smonth sums in 2010
+rownames(B2010) <- B2010[,1]
+B2010 <- subset(B2010, select = -c(Sector))
+#rearrange the columns by moving Oct, Nov, and Dec to the end 
+B2010 <- cbind(subset.data.frame(B2010)[,4:12],subset.data.frame(B2010)[,1:3])
+monthSum2010 <- colSums((B2010))
+B2010 <- rbind(B2010,monthSum2010)
+rownames(B2010)[10] <- "Sector Total"
+
+sectorSum2010 <- rowSums(B2010)
+B2010 <- cbind(B2010,sectorSum2010)
+colnames(B2010)[13] <- "Annual Total" 
+
+#add setor sums and smonth sums in 2017
+rownames(B2017) <- B2017[,1]
+B2017 <- subset(B2017, select = -c(Sector))
+#rearrange the columns by moving Oct, Nov, and Dec to the end 
+B2017 <- cbind(subset.data.frame(B2017)[,4:12],subset.data.frame(B2017)[,1:3])
+monthSum2017 <- colSums((B2017))
+B2017 <- rbind(B2017,monthSum2017)
+rownames(B2017)[10] <- "Sector Total"
+
+sectorSum2017 <- rowSums(B2017)
+B2017 <- cbind(B2017,sectorSum2017)
+colnames(B2017)[13] <- "Annual Total" 
+
+sector <- rownames(B2010)
+month <- colnames(B2010)
+#compare apprehensions by sectors
+#input is the month you want to look up
+graph_sectors <- function(i){
+  B2010<-t(B2010)
+  B2017<-t(B2017)
+  year_comp <- rbind(B2010[i,1:9],B2017[i,1:9])
+  barplot(year_comp, 
+          beside = TRUE, 
+          col = c("blue", "orange"), 
+          bty="n",
+          las=2,
+          main = "Compare 2010 & 2017 Apprehensions by Sectors"
+          )
+  legend("topleft", 
+         c(paste(month[i] ,"2010"),
+           paste(month[i],"2017")),
+         pch=15,  
+         col=c("blue", "orange"),  
+         bty="n")
+}
+#say if we want to compare apprehensions in January by sectors
+graph_sectors(13)
+```
+
+
+## Compare Apprehensions by Months
+Q2: It seems Mar, Apr, and May has highest apprehensions in 2010, and Oct, Nov, and Dec do in 2017. 
+Is our observation correct? Has the 3-month maximum changed?
+```{r}
+#input is the index of the sector you want to look up
+graph_months <- function(i){ 
+  year_comp <- rbind(B2010[i,1:12],B2017[i,1:12])
+  barplot(as.matrix(year_comp), beside = T, col = c("green", "yellow"), bty="n",las=2,
+          main = "Compare 2010 & 2017 Apprehensions by Months")
+  legend("topright", 
+         c(paste(sector[i] ,"2010"),paste(sector[i],"2017")), 
+         pch=15,  
+         col=c("green","yellow"),  
+         bty="n"
+         )
+}
+#say if we want to compare apprehension in Del Rio by months
+graph_months(10)
+```
+
+## Q1: Find the Maximum Sectors
+By looking barplot and running code in R, we get the same result:
+```{r, echo=TRUE}
+#find the index of the sector that has most apprehensions in 2010 
+most_apprehensions_2010 <- match(max(B2010[1:9,13]), B2010[1:9,13])
+#it is Tucson
+rownames(B2010)[most_apprehensions_2010]
+
+#find the index of the sector that has most apprehensions in 2017
+most_apprehensions_2017 <- match(max(B2017[1:9,13]), B2017[1:9,13])
+#it is Rio Grande Valley
+rownames(B2017)[most_apprehensions_2017]
+```
+
+## Q1: Has Maximum Changed? Using Welch Two Sample t-test.
+We have the following hypothesis: \newline
+
+$H_{0}:\mu _{Tucson, 2010} - \mu _{RGV, 2017} = 0$ \newline
+$H_{a}:\mu _{Tucson, 2010} - \mu _{RGV, 2017} \neq  0$ 
+
+```{r, echo=TRUE}
+#create the dataset for Tucson in 2010
+B2010_Tuson <- B2010[most_apprehensions_2010,1:12]
+#create the dataset for Rio Grande Valley in 2017
+B2017_RGV <- B2017[most_apprehensions_2017,1:12]
+```
+
+## Q1: Has Maximum Changed? Using Welch Two Sample t-test.
+```{r, echo=TRUE}
+#test whether these two samples have same sample mean 
+t.test(B2010_Tuson, B2017_RGV)
+```
+
+## Q1: Has Maximum Changed? Using Welch Two Sample t-test.
+$H_{0}:\mu _{Tucson, 2010} - \mu _{RGV, 2017} = 0$ \newline
+$H_{a}:\mu _{Tucson, 2010} - \mu _{RGV, 2017} \neq  0$ 
+
+t = 1.9547, df = 21.973, p-value = 0.06346\newline
+
+Because p-value = 0.06346 > 0.05, we fail to reject the null hypothesis at significance level of 5%, and conclude that there is NO significant difference between the means of the highest sector apprenhensions in 2010 and 2017
+
+
+## Q2: Find the three Months with Most Apprehensions
+Our observation from barplot is correct
+```{r, echo=TRUE}
+#find the three months that has the most apprehensions in 2010
+most_3m_apprehensions_2010 <- order(B2010[10,1:12], decreasing = TRUE)[1:3]
+#they are March, April, and May
+colnames(B2010)[most_3m_apprehensions_2010]
+#find the three months that has the most apprehensions in 2017
+most_3m_apprehensions_2017 <- order(B2017[10,1:12], decreasing = TRUE)[1:3]
+#they are November, October, and December 
+colnames(B2017)[most_3m_apprehensions_2017]
+```
+
+
+## Q2: Has 3-Month Maximums Changed? Using Welch Two Sample t-test.
+We have the following hypothesis: \newline
+
+$H_{0}:\mu _{3 months, 2010} - \mu _{3 months, 2017} = 0$ \newline
+$H_{a}:\mu _{3 months, 2010} - \mu _{3 months, 2017} \neq  0$
+```{r, echo=TRUE}
+#create the dataset for March, April, and May in 2010
+B2010_3m <- B2010[most_3m_apprehensions_2010,1:12]
+#create the dataset for November, October, and December in 2017
+B2017_3m <- B2017[most_3m_apprehensions_2017,1:12]
+```
+
+
+## Q2: Has 3-Month Maximum Changed? Using Welch Two Sample t-test.
+```{r, echo=TRUE}
+#test whether these two samples have same sample mean 
+t.test(B2010_3m, B2017_3m)
+```
+
+## Q2: Has 3-Month Maximum Changed? Using Welch Two Sample t-test.
+$H_{0}:\mu _{3 months, 2010} - \mu _{3 months, 2017} = 0$ \newline
+$H_{a}:\mu _{3 months, 2010} - \mu _{3 months, 2017} \neq  0$
+
+t = 0.9523, df = 51.625, p-value = 0.3454\newline
+
+Because p-value = 0.3454 > 0.05, we fail to reject the null hypothesis at significance level of 5%, and conclude that there is NO significant difference between the means of apprehensions from March to May in 2010 and from October to December in 2017
+
+## Time Series Chart
+Decreasing trend
+```{r}
+
+ts1 <- read.csv("PB monthly summaries.csv")
+#delete first column
+ts2 <- ts1[2:13]
+#rearrange the columns by moving Oct, Nov, and Dec to the end 
+ts3 <- cbind(subset.data.frame(ts2)[,4:12],subset.data.frame(ts2)[,1:3])
+#reverse data 
+ts4 <- ts3[ nrow(ts3):1, ]
+#turn it to vectors 
+ts5 <- as.vector(t(ts4))
+#create time series 
+ts6 <- ts(ts5,frequency=12,start=c(2000,1))
+#plot time series
+ts.plot(ts6, gpars=list(main ="Time Series Chart of Apprehensions from 2000 to 2017",xlab="year", ylab="Apprehensions", col= "black", lty=c(1:3)))
+
+#create legends
+legend(2010,220000, legend = "Monthly Apprehensions", 
+       col = "black", lty=1, cex=0.75)
+
+```
+
+## Time Series Chart
+Annual Average shown by Segments
+```{r}
+ts.plot(ts6, gpars=list(main ="Time Series Chart of Apprehensions from 2000 to 2017",xlab="year", ylab="Apprehensions", col= "black", lty=c(1:3)))
+#caculate annual averages
+ts_avg <- apply(ts4,1,mean)
+#create annual averages in time series
+ts_avg<-ts(ts_avg,start = c(2000.5), frequency=1)
+
+#create segments and text for annual averages
+for (i in 1:18) {
+  segments(1999+i,ts_avg[i],2000+i,ts_avg[i],col = 2,lwd = 1)
+  text(2000.3 + i, ts_avg[i], labels = 1999+i, cex=0.6, col = "red" , font=1)
+}
+#create legends
+legend(2010,220000, legend = c("Monthly Apprehensions","Annual Averages by segments"), 
+       col = c("black","red"),pch =c(NA,NA),lty=c(1,1), cex=0.75)
+```
+
+
+
+## Time Series Chart
+Changed to Points
+```{r}
+ts.plot(ts6, gpars=list(main ="Time Series Chart of Apprehensions from 2000 to 2017",xlab="year", ylab="Apprehensions", col= "black", lty=c(1:3)))
+#caculate annual averages
+ts_avg <- apply(ts4,1,mean)
+#create annual averages in time series
+ts_avg<-ts(ts_avg,start = c(2000.5), frequency=1)
+
+#create points for better visualization
+points(ts_avg,col = "blue", pch=20)
+
+#create legends
+legend(2010,220000, legend = c("Monthly Apprehensions","Annual Averages by Points"), 
+       col = c("black","blue"),pch =c(NA,20),lty=c(1,NA), cex=0.75)
+
+```
+
+
+
+## Time Series Chart
+Change to Points and Line
+```{r}
+ts.plot(ts6, gpars=list(main ="Time Series Chart of Apprehensions from 2000 to 2017",xlab="year", ylab="Apprehensions", col= "black", lty=c(1:3)))
+#caculate annual averages
+ts_avg <- apply(ts4,1,mean)
+#create annual averages in time series
+ts_avg<-ts(ts_avg,start = c(2000.5), frequency=1)
+
+#create points and connected dashed line for better visualization
+points(ts_avg,col = "blue", pch=20)
+lines(ts_avg,col = "blue", pch=20,lty=3)
+#create legends
+legend(2010,220000, legend = c("Monthly Apprehensions","Annual Averages by Points","Annual Average Connected by Dashed Line"), 
+       col = c("black","blue", "blue"),pch =c(NA,20,NA),lty=c(1,NA,3), cex=0.75)
+
+```
+
+
+## Time Series Chart
+All together
+```{r}
+#plot time series
+ts.plot(ts6, gpars=list(main ="Time Series Chart of Apprehensions from 2000 to 2017",xlab="year", ylab="Apprehensions", col= "black", lty=c(1:3)))
+#caculate annual averages
+ts_avg <- apply(ts4,1,mean)
+#create annual averages in time series
+ts_avg<-ts(ts_avg,start = c(2000.5), frequency=1)
+
+#create segments and text for annual averages
+for (i in 1:18) {
+  segments(1999+i,ts_avg[i],2000+i,ts_avg[i],col = 2,lwd = 1)
+  text(2000.3 + i, ts_avg[i], labels = 2001+i, cex=0.6, col = "red" , font=1)
+}
+#create points and connected dashed line for better visualization
+points(ts_avg,col = "blue", pch=20)
+lines(ts_avg,col = "blue", pch=20,lty=3)
+#create legends
+legend(2010,220000, legend = c("Monthly Apprehensions","Annual Averages by segments","Annual Averages by Points","Annual Average Connected by Dashed Line"), 
+       col = c("black","red","blue", "blue"),pch =c(NA,NA,20,NA),lty=c(1,1,NA,3), cex=0.75)
+
+```
+
+## Time Series Chart
+By looking at the Time Series Chart, we know that the number of monthly apprehensions in US is decreasing through years and reached a lowest point in lastest 17 years in 2017. 
+```{r}
+#plot time series
+ts.plot(ts6, gpars=list(main ="Time Series Chart of Apprehensions from 2000 to 2017",xlab="year", ylab="Apprehensions", col= "black", lty=c(1:3)))
+#caculate annual averages
+ts_avg <- apply(ts4,1,mean)
+#create annual averages in time series
+ts_avg<-ts(ts_avg,start = c(2000.5), frequency=1)
+
+#create segments and text for annual averages
+for (i in 1:18) {
+  segments(1999+i,ts_avg[i],2000+i,ts_avg[i],col = 2,lwd = 1)
+  text(2000.3 + i, ts_avg[i], labels = 2001+i, cex=0.6, col = "red" , font=1)
+}
+#create points and connected dashed line for better visualization
+points(ts_avg,col = "blue", pch=20)
+lines(ts_avg,col = "blue", pch=20,lty=3)
+#create legends
+legend(2010,220000, legend = c("Monthly Apprehensions","Annual Averages by segments","Annual Averages by Points","Annual Average Connected by Dashed Line"), 
+       col = c("black","red","blue", "blue"),pch =c(NA,NA,20,NA),lty=c(1,1,NA,3), cex=0.75)
+
+```
+
+## Conclusion 
+The decreasing trend and the new lowest level we found from time series chart indeed reflect the effect of President Trump's and the US Department of Homeland Security's strict regulation on illegal apprehensions across the southern border. However, the t-tests we did don't show significant diference between the maximum levels of apprehensions through years. This is acceptable because we didn't compare the mimimum changes through years and our comparisons are across different sectors and months. To further study on the US illegal apprehensions in recently years, we need to conduct more detailed research how the apprehensions in each specific sector changes through months and years.
+
+
+
+
